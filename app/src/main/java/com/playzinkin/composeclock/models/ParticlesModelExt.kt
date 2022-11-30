@@ -16,39 +16,39 @@ fun ParticlesModel.State.next(
     val unifiedPeriod = period / 10000f
     val acceleration = transformedMillis / 2.0f
     val accelerationPeriod = period * period / 200000f
-    val updatedLength = length + velocity * unifiedPeriod + acceleration * accelerationPeriod
-    return if (updatedLength < style.maxLengthModifier) {
+    val newOffset = offset + velocity * unifiedPeriod + acceleration * accelerationPeriod
+    return if (newOffset < style.maxPosition) {
         copy(
-            length = updatedLength,
-            alpha = ParticlesModel.State.calcAlpha(style, length),
+            offset = newOffset,
+            alpha = ParticlesModel.State.calcAlpha(style, offset),
             millis = (millis + period) % 1000,
         )
     } else {
-        ParticlesModel.State.create(random, style, style.minLengthModifier)
+        ParticlesModel.State.create(random, style, style.minPosition)
     }
 }
 
 fun ParticlesModel.State.Companion.create(
     random: Random,
     style: ParticlesModel.Style,
-    length: Float = calcLength(random, style),
+    offset: Float = calcOffset(random, style),
     millis: Long = System.currentTimeMillis() % 1000,
 ): ParticlesModel.State =
     ParticlesModel.State(
-        length = length,
+        offset = offset,
         angle = calcAngle(random, style),
         particleSize = calcSize(random, style),
         velocity = calcVelocity(random, style),
         drawStyle = calcDrawStyle(random),
-        alpha = calcAlpha(style, length),
+        alpha = calcAlpha(style, offset),
         millis = millis,
     )
 
-private fun ParticlesModel.State.Companion.calcLength(random: Random, style: ParticlesModel.Style) =
-    random.nextFloat(style.minLengthModifier, style.maxLengthModifier)
+private fun ParticlesModel.State.Companion.calcOffset(random: Random, style: ParticlesModel.Style) =
+    random.nextFloat(style.minPosition, style.maxPosition)
 
 private fun ParticlesModel.State.Companion.calcAngle(random: Random, style: ParticlesModel.Style) =
-    random.nextFloat(style.startAngleOffsetRadians, style.endAngleOffsetRadians)
+    random.nextFloat(style.startAngleInRadians, style.endAngleInRadians)
 
 private fun ParticlesModel.State.Companion.calcSize(random: Random, style: ParticlesModel.Style) =
     random.nextFloat(style.minSize.value, style.maxSize.value)
@@ -68,23 +68,19 @@ private fun ParticlesModel.State.Companion.calcDrawStyle(random: Random): DrawSt
 
 private fun ParticlesModel.State.Companion.calcAlpha(
     style: ParticlesModel.Style,
-    length: Float
+    offset: Float
 ): Float {
-    val alphaLength = 0.15f
-    val alphaMinThreshold = style.minLengthModifier + alphaLength
-    val alphaMaxThreshold = style.maxLengthModifier - alphaLength
     return when {
-        length > alphaMaxThreshold -> {
-            (1f - ((length - alphaMaxThreshold) / alphaLength)).coerceAtLeast(
-                0f
-            )
+        offset > style.maxAlphaThreshold -> {
+            (1f - ((offset - style.maxAlphaThreshold) / (style.maxPosition - style.maxAlphaThreshold)))
+                .coerceAtLeast(0f)
         }
-        length < alphaMinThreshold -> {
-            (1f - ((alphaMinThreshold - length) / alphaLength)).coerceIn(
-                0f,
-                1f
-            )
+
+        offset < style.minAlphaThreshold -> {
+            (1f - ((style.minAlphaThreshold - offset) / (style.minAlphaThreshold - style.minPosition)))
+                .coerceIn(0f, 1f)
         }
+
         else -> 1f
     }
 }
@@ -120,4 +116,4 @@ fun ParticlesModel.Companion.create(
 }
 
 private fun ParticlesModel.Companion.calculateNumParticles(style: ParticlesModel.Style): Int =
-    (style.density * (style.endAngleOffsetRadians - style.startAngleOffsetRadians)).toInt()
+    (style.density * (style.endAngleInRadians - style.startAngleInRadians)).toInt()

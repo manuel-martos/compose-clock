@@ -54,7 +54,7 @@ private fun ParticlesModel.State.Companion.calcOffset(
     random.nextFloat(minPosition, maxPosition)
 
 private fun ParticlesModel.State.Companion.calcAngle(random: Random, style: ParticlesModel.Style) =
-    random.nextFloat(style.startAngleInRadians, style.endAngleInRadians)
+    random.nextFloat(style.startAngle, style.endAngle)
 
 private fun ParticlesModel.State.Companion.calcSize(random: Random, style: ParticlesModel.Style) =
     random.nextFloat(style.minSize.value, style.maxSize.value)
@@ -91,7 +91,11 @@ private fun ParticlesModel.State.Companion.calcAlpha(
     }
 }
 
-fun ParticlesModel.next(random: Random, period: Long, angleOffset: Float): ParticlesModel =
+fun ParticlesModel.next(
+    random: Random,
+    period: Long,
+    angleOffset: Float = 0f
+): ParticlesModel =
     copy(
         angleOffset = angleOffset,
         states = states.map { it.next(random, style, period) }
@@ -120,4 +124,4 @@ fun ParticlesModel.Companion.create(
 }
 
 private fun ParticlesModel.Companion.calculateNumParticles(style: ParticlesModel.Style): Int =
-    (style.density * (style.endAngleInRadians - style.startAngleInRadians)).toInt()
+    (style.density * (style.endAngle - style.startAngle)).toInt()

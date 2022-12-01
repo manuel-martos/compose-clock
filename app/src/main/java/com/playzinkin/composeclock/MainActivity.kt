@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -23,7 +24,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
@@ -36,7 +36,8 @@ import com.playzinkin.composeclock.utils.SystemClock
 import com.playzinkin.composeclock.utils.SystemClockImpl
 import kotlinx.coroutines.android.awaitFrame
 import kotlinx.coroutines.isActive
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeUnit.MILLISECONDS
+import java.util.concurrent.TimeUnit.NANOSECONDS
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
@@ -60,7 +61,11 @@ class MainActivity : ComponentActivity() {
                 SideEffect {
                     systemUiController.setStatusBarColor(color = Color.Transparent)
                 }
-                ComposeClock()
+                ComposeClock(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                )
             }
         }
     }
@@ -133,20 +138,24 @@ fun ClockParticles(
     modifier: Modifier = Modifier,
 ) {
     val random = LocalRandom.current
-    var particlesModel by remember { mutableStateOf(ParticlesModel()) }
+    var particlesModel by remember {
+        mutableStateOf(
+            ParticlesModel.create(
+                style = ParticlesModel.Style.Background,
+                random = random,
+            )
+        )
+    }
     FrameEffect(Unit) { period ->
-        particlesModel = particlesModel.next(random, period, 0f)
+        particlesModel = particlesModel.next(
+            random = random,
+            period = period,
+        )
     }
     Canvas(
         modifier = modifier
             .fillMaxSize()
             .alpha(0.6f)
-            .onSizeChanged {
-                particlesModel = ParticlesModel.create(
-                    style = ParticlesModel.Style.Background,
-                    random = random,
-                )
-            }
     ) {
         drawParticles(particlesModel)
     }
@@ -158,7 +167,18 @@ fun ClockHoursHand(
 ) {
     val random = LocalRandom.current
     val systemClock = LocalSystemClock.current
-    var particlesModel by remember { mutableStateOf(ParticlesModel()) }
+    var particlesModel by remember {
+        mutableStateOf(
+            ParticlesModel.create(
+                random = random,
+                style = ParticlesModel.Style.HourHand,
+                angleOffset = systemClock
+                    .currentTimeMillis()
+                    .toHourRadians(systemClock),
+            )
+
+        )
+    }
     FrameEffect(Unit) { period ->
         particlesModel =
             particlesModel.next(
@@ -169,19 +189,7 @@ fun ClockHoursHand(
                     .toHourRadians(systemClock)
             )
     }
-    Canvas(
-        modifier = modifier
-            .fillMaxSize()
-            .onSizeChanged {
-                particlesModel = ParticlesModel.create(
-                    random = random,
-                    style = ParticlesModel.Style.HourHand,
-                    angleOffset = systemClock
-                        .currentTimeMillis()
-                        .toHourRadians(systemClock),
-                )
-            }
-    ) {
+    Canvas(modifier = modifier.fillMaxSize()) {
         drawParticles(particlesModel)
     }
 }
@@ -192,7 +200,17 @@ fun ClockMinutesHand(
 ) {
     val random = LocalRandom.current
     val systemClock = LocalSystemClock.current
-    var particlesModel by remember { mutableStateOf(ParticlesModel()) }
+    var particlesModel by remember {
+        mutableStateOf(
+            ParticlesModel.create(
+                random = random,
+                style = ParticlesModel.Style.MinuteHand,
+                angleOffset = systemClock
+                    .currentTimeMillis()
+                    .toMinuteRadians(),
+            )
+        )
+    }
     FrameEffect(Unit) { period ->
         particlesModel =
             particlesModel.next(
@@ -203,19 +221,7 @@ fun ClockMinutesHand(
                     .toMinuteRadians()
             )
     }
-    Canvas(
-        modifier = modifier
-            .fillMaxSize()
-            .onSizeChanged {
-                particlesModel = ParticlesModel.create(
-                    random = random,
-                    style = ParticlesModel.Style.MinuteHand,
-                    angleOffset = systemClock
-                        .currentTimeMillis()
-                        .toMinuteRadians(),
-                )
-            }
-    ) {
+    Canvas(modifier = modifier.fillMaxSize()) {
         drawParticles(particlesModel)
     }
 }
@@ -231,8 +237,8 @@ fun ClockSecondsHand(
     }
     Canvas(modifier = modifier.fillMaxSize()) {
         val interpolator = FastOutSlowInEasing
-        val animatedSecond =
-            secondModel.state.seconds + interpolator.transform((secondModel.state.millis % 1000) / 1000f)
+        val animatedSecond = secondModel.state.seconds +
+                interpolator.transform((secondModel.state.millis % 1000) / 1000f)
         val initialDegrees = -PI_DIV_2
         val secondsToRadians = PI / 30f
         val degree = initialDegrees + animatedSecond * secondsToRadians
@@ -275,7 +281,7 @@ fun FrameEffect(
     LaunchedEffect(key1) {
         var lastFrame = 0L
         while (isActive) {
-            val nextFrame = TimeUnit.NANOSECONDS.toMillis(awaitFrame())
+            val nextFrame = NANOSECONDS.toMillis(awaitFrame())
             if (lastFrame != 0L) {
                 val period = nextFrame - lastFrame
                 block.invoke(period)
@@ -286,10 +292,11 @@ fun FrameEffect(
 }
 
 fun Long.toMinuteRadians() =
-    PI * ((TimeUnit.MILLISECONDS.toMinutes(this) % 60 + ((TimeUnit.MILLISECONDS.toSeconds(this) % 60) / 60f)) / 30f) - PI_DIV_2
+    PI * ((MILLISECONDS.toMinutes(this) % 60
+            + ((MILLISECONDS.toSeconds(this) % 60) / 60f)) / 30f) - PI_DIV_2
 
 fun Long.toHourRadians(systemClock: SystemClock) =
     PI * ((systemClock.getHour()
-            + ((TimeUnit.MILLISECONDS.toMinutes(this) % 60) / 60f)
-            + ((TimeUnit.MILLISECONDS.toSeconds(this) % 60) / 3600f)) / 6f) - PI_DIV_2
+            + ((MILLISECONDS.toMinutes(this) % 60) / 60f)
+            + ((MILLISECONDS.toSeconds(this) % 60) / 3600f)) / 6f) - PI_DIV_2
 

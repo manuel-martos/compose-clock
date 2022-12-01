@@ -16,8 +16,8 @@ data class ParticlesModel(
 ) {
     @Stable
     sealed class Style {
-        abstract val startAngleInRadians: Float
-        abstract val endAngleInRadians: Float
+        abstract val startAngle: Float
+        abstract val endAngle: Float
         abstract val minPosition: Float
         abstract val maxPosition: Float
         abstract val minAlphaThreshold: Float
@@ -30,8 +30,8 @@ data class ParticlesModel(
 
         @Stable
         object Background : Style() {
-            override val startAngleInRadians: Float = 0f
-            override val endAngleInRadians: Float = 2.0f * PI
+            override val startAngle: Float = 0f
+            override val endAngle: Float = 2.0f * PI
             override val minPosition: Float = 0.05f
             override val maxPosition: Float = 0.85f
             override val minAlphaThreshold: Float = 0.2f
@@ -45,8 +45,8 @@ data class ParticlesModel(
 
         @Stable
         object MinuteHand : Style() {
-            override val startAngleInRadians: Float = -PI / 60f
-            override val endAngleInRadians: Float = PI / 60f
+            override val startAngle: Float = -PI / 60f
+            override val endAngle: Float = PI / 60f
             override val minPosition: Float = 0.0f
             override val maxPosition: Float = 0.70f
             override val minAlphaThreshold: Float = 0.1f
@@ -60,8 +60,8 @@ data class ParticlesModel(
 
         @Stable
         object HourHand : Style() {
-            override val startAngleInRadians: Float = -PI / 60f
-            override val endAngleInRadians: Float = PI / 60f
+            override val startAngle: Float = -PI / 60f
+            override val endAngle: Float = PI / 60f
             override val minPosition: Float = 0.0f
             override val maxPosition: Float = 0.5f
             override val minAlphaThreshold: Float = 0.1f

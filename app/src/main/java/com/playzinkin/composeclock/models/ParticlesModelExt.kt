@@ -1,10 +1,9 @@
 package com.playzinkin.composeclock.models
 
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import com.playzinkin.composeclock.nextFloat
+import com.playzinkin.composeclock.utils.nextFloat
 import kotlin.random.Random
 
 fun ParticlesModel.State.next(
@@ -12,27 +11,31 @@ fun ParticlesModel.State.next(
     style: ParticlesModel.Style,
     period: Long
 ): ParticlesModel.State {
-    val transformedMillis = FastOutSlowInEasing.transform(millis / 1000f)
     val unifiedPeriod = period / 10000f
-    val acceleration = transformedMillis / 2.0f
-    val accelerationPeriod = period * period / 200000f
-    val newOffset = offset + velocity * unifiedPeriod + acceleration * accelerationPeriod
+    val appliedOffset = velocity * unifiedPeriod
+    val newOffset = offset + appliedOffset
     return if (newOffset < style.maxPosition) {
         copy(
             offset = newOffset,
             alpha = ParticlesModel.State.calcAlpha(style, offset),
-            millis = (millis + period) % 1000,
         )
     } else {
-        ParticlesModel.State.create(random, style, style.minPosition)
+        ParticlesModel.State.create(
+            random = random,
+            style = style,
+            offset = ParticlesModel.State.calcOffset(
+                random = random,
+                minPosition = style.minPosition,
+                maxPosition = style.minPosition + appliedOffset
+            ),
+        )
     }
 }
 
 fun ParticlesModel.State.Companion.create(
     random: Random,
     style: ParticlesModel.Style,
-    offset: Float = calcOffset(random, style),
-    millis: Long = System.currentTimeMillis() % 1000,
+    offset: Float = calcOffset(random, style.minPosition, style.maxPosition),
 ): ParticlesModel.State =
     ParticlesModel.State(
         offset = offset,
@@ -41,11 +44,14 @@ fun ParticlesModel.State.Companion.create(
         velocity = calcVelocity(random, style),
         drawStyle = calcDrawStyle(random),
         alpha = calcAlpha(style, offset),
-        millis = millis,
     )
 
-private fun ParticlesModel.State.Companion.calcOffset(random: Random, style: ParticlesModel.Style) =
-    random.nextFloat(style.minPosition, style.maxPosition)
+private fun ParticlesModel.State.Companion.calcOffset(
+    random: Random,
+    minPosition: Float,
+    maxPosition: Float
+) =
+    random.nextFloat(minPosition, maxPosition)
 
 private fun ParticlesModel.State.Companion.calcAngle(random: Random, style: ParticlesModel.Style) =
     random.nextFloat(style.startAngleInRadians, style.endAngleInRadians)
@@ -98,13 +104,11 @@ fun ParticlesModel.Companion.create(
     angleOffset: Float = 0f
 ): ParticlesModel {
     val states = mutableListOf<ParticlesModel.State>()
-    val millis = System.currentTimeMillis() % 1000
     repeat(numParticles) {
         states.add(
             ParticlesModel.State.create(
                 random = random,
                 style = style,
-                millis = millis,
             )
         )
     }

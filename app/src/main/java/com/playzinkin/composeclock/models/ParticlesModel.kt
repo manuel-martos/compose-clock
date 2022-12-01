@@ -1,6 +1,5 @@
 package com.playzinkin.composeclock.models
 
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -83,7 +82,6 @@ data class ParticlesModel(
         val alpha: Float = 1f,
         val velocity: Float = 0f,
         val drawStyle: DrawStyle = Fill,
-        val millis: Long = 0,
     ) {
         companion object
     }

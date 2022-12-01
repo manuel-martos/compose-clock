@@ -1,4 +1,4 @@
-package com.playzinkin.composeclock
+package com.playzinkin.composeclock.utils
 
 import kotlin.random.Random
 

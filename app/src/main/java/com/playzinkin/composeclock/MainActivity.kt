@@ -25,15 +25,17 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.playzinkin.composeclock.models.ParticlesModel
 import com.playzinkin.composeclock.models.SecondModel
 import com.playzinkin.composeclock.models.create
 import com.playzinkin.composeclock.models.next
 import com.playzinkin.composeclock.ui.theme.ComposeClockTheme
+import com.playzinkin.composeclock.utils.SystemClock
+import com.playzinkin.composeclock.utils.SystemClockImpl
 import kotlinx.coroutines.android.awaitFrame
 import kotlinx.coroutines.isActive
-import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import kotlin.math.cos
 import kotlin.math.min
@@ -45,11 +47,13 @@ private const val PI_DIV_2 = PI / 2f
 
 val LocalRandom = compositionLocalOf { Random(System.currentTimeMillis()) }
 
+val LocalSystemClock = compositionLocalOf<SystemClock> { SystemClockImpl() }
+
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.setDecorFitsSystemWindows(false)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             ComposeClockTheme {
                 val systemUiController = rememberSystemUiController()
@@ -153,10 +157,17 @@ fun ClockHoursHand(
     modifier: Modifier = Modifier,
 ) {
     val random = LocalRandom.current
+    val systemClock = LocalSystemClock.current
     var particlesModel by remember { mutableStateOf(ParticlesModel()) }
     FrameEffect(Unit) { period ->
         particlesModel =
-            particlesModel.next(random, period, System.currentTimeMillis().toHourRadians())
+            particlesModel.next(
+                random = random,
+                period = period,
+                angleOffset = systemClock
+                    .currentTimeMillis()
+                    .toHourRadians(systemClock)
+            )
     }
     Canvas(
         modifier = modifier
@@ -165,9 +176,9 @@ fun ClockHoursHand(
                 particlesModel = ParticlesModel.create(
                     random = random,
                     style = ParticlesModel.Style.HourHand,
-                    angleOffset = System
+                    angleOffset = systemClock
                         .currentTimeMillis()
-                        .toHourRadians(),
+                        .toHourRadians(systemClock),
                 )
             }
     ) {
@@ -180,10 +191,17 @@ fun ClockMinutesHand(
     modifier: Modifier = Modifier,
 ) {
     val random = LocalRandom.current
+    val systemClock = LocalSystemClock.current
     var particlesModel by remember { mutableStateOf(ParticlesModel()) }
     FrameEffect(Unit) { period ->
         particlesModel =
-            particlesModel.next(random, period, System.currentTimeMillis().toMinuteRadians())
+            particlesModel.next(
+                random = random,
+                period = period,
+                angleOffset = systemClock
+                    .currentTimeMillis()
+                    .toMinuteRadians()
+            )
     }
     Canvas(
         modifier = modifier
@@ -192,7 +210,7 @@ fun ClockMinutesHand(
                 particlesModel = ParticlesModel.create(
                     random = random,
                     style = ParticlesModel.Style.MinuteHand,
-                    angleOffset = System
+                    angleOffset = systemClock
                         .currentTimeMillis()
                         .toMinuteRadians(),
                 )
@@ -206,7 +224,8 @@ fun ClockMinutesHand(
 fun ClockSecondsHand(
     modifier: Modifier = Modifier,
 ) {
-    var secondModel by remember { mutableStateOf(SecondModel.create()) }
+    val systemClock = LocalSystemClock.current
+    var secondModel by remember { mutableStateOf(SecondModel.create(systemClock)) }
     FrameEffect(Unit) { period ->
         secondModel = secondModel.next(period)
     }
@@ -269,8 +288,8 @@ fun FrameEffect(
 fun Long.toMinuteRadians() =
     PI * ((TimeUnit.MILLISECONDS.toMinutes(this) % 60 + ((TimeUnit.MILLISECONDS.toSeconds(this) % 60) / 60f)) / 30f) - PI_DIV_2
 
-fun Long.toHourRadians() =
-    PI * ((Calendar.getInstance().get(Calendar.HOUR) % 12
+fun Long.toHourRadians(systemClock: SystemClock) =
+    PI * ((systemClock.getHour()
             + ((TimeUnit.MILLISECONDS.toMinutes(this) % 60) / 60f)
             + ((TimeUnit.MILLISECONDS.toSeconds(this) % 60) / 3600f)) / 6f) - PI_DIV_2
 

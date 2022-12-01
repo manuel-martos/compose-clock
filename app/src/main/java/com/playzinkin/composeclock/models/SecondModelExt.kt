@@ -1,5 +1,6 @@
 package com.playzinkin.composeclock.models
 
+import com.playzinkin.composeclock.utils.SystemClock
 
 fun SecondModel.next(period: Long): SecondModel =
     copy(
@@ -9,13 +10,18 @@ fun SecondModel.next(period: Long): SecondModel =
         )
     )
 
-fun SecondModel.Companion.create(style: SecondModel.Style = SecondModel.Style.Normal) =
-    System.currentTimeMillis().let {
-        SecondModel(
-            style = style,
-            state = SecondModel.State(
-                seconds = (it / 1000) % 60,
-                millis = (it % 1000)
+fun SecondModel.Companion.create(
+    systemClock: SystemClock,
+    style: SecondModel.Style = SecondModel.Style.Normal
+) =
+    systemClock
+        .currentTimeMillis()
+        .let {
+            SecondModel(
+                style = style,
+                state = SecondModel.State(
+                    seconds = (it / 1000) % 60,
+                    millis = (it % 1000)
+                )
             )
-        )
-    }
+        }
